@@ -155,6 +155,47 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
 
 -------------------------------------------------
+-- FIX TWEEN (นิ่ง)
+-------------------------------------------------
+function TweenTo(pos)
+	local char = player.Character
+	if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+	
+	local hrp = char.HumanoidRootPart
+	local hum = char:FindFirstChild("Humanoid")
+	
+	if hrp:FindFirstChild("Tweening") then return end
+	local flag = Instance.new("BoolValue", hrp)
+	flag.Name = "Tweening"
+	
+	pos = Vector3.new(pos.X, hrp.Position.Y, pos.Z)
+	
+	if hum then
+		hum:ChangeState(Enum.HumanoidStateType.Physics)
+		for _,v in pairs(hum:GetPlayingAnimationTracks()) do
+			v:Stop()
+		end
+	end
+	
+	local distance = (hrp.Position - pos).Magnitude
+	
+	local tween = TweenService:Create(
+		hrp,
+		TweenInfo.new(distance/260, Enum.EasingStyle.Linear),
+		{CFrame = CFrame.new(pos)}
+	)
+	
+	tween:Play()
+	tween.Completed:Wait()
+	
+	if hum then
+		hum:ChangeState(Enum.HumanoidStateType.Running)
+	end
+	
+	flag:Destroy()
+end
+
+-------------------------------------------------
 -- FUNCTIONS
 -------------------------------------------------
 function HasFOD()
@@ -167,140 +208,44 @@ function HasFOD()
 	return false
 end
 
-function TweenTo(pos)
-	local char=player.Character
+-------------------------------------------------
+-- FIX AUTO CHEST
+-------------------------------------------------
+function GetChests()
+	local list = {}
+	for _,v in pairs(workspace:GetDescendants()) do
+		if v:IsA("TouchTransmitter") then
+			local chest = v.Parent
+			if chest and chest:IsA("BasePart") then
+				table.insert(list, chest)
+			end
+		end
+	end
+	return list
+end
+
+function GetNearestChest()
+	local char = player.Character
 	if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-	local tween=TweenService:Create(char.HumanoidRootPart,TweenInfo.new((char.HumanoidRootPart.Position-pos).Magnitude/200),{CFrame=CFrame.new(pos)})
-	tween:Play()
-	tween.Completed:Wait()
+	
+	local hrp = char.HumanoidRootPart
+	local chests = GetChests()
+	
+	table.sort(chests, function(a,b)
+		return (a.Position - hrp.Position).Magnitude < (b.Position - hrp.Position).Magnitude
+	end)
+	
+	return chests[1]
 end
 
-function GetBoss()
-	for _,v in pairs(workspace.Enemies:GetChildren()) do
-		if v.Name=="Darkbeard" and v:FindFirstChild("HumanoidRootPart") and v.Humanoid.Health>0 then
-			return v
-		end
-	end
-end
-
-function SummonBoss()
-	local altar=workspace:FindFirstChild("DarkbeardAltar",true)
-	if altar then
-		TweenTo(altar.Position+Vector3.new(0,5,0))
-		task.wait(1)
-		local tool=player.Backpack:FindFirstChild("First of Darkness")
-		if tool then
-			player.Character.Humanoid:EquipTool(tool)
-			tool:Activate()
-		end
-	end
-end
-
-function IsBossCasting(boss)
-	local hum=boss:FindFirstChild("Humanoid")
-	local hrp=boss:FindFirstChild("HumanoidRootPart")
-	if not hum or not hrp then return false end
-	if hrp.Velocity.Magnitude<1 then return true end
-	for _,v in pairs(hum:GetPlayingAnimationTracks()) do
-		if v.IsPlaying then return true end
-	end
-	return false
-end
-
--------------------------------------------------
--- LOOPS
--------------------------------------------------
 task.spawn(function()
-	while task.wait(1) do
+	while task.wait(0.4) do
 		if _G.AutoChest and not HasFOD() then
-			for _,v in pairs(workspace:GetDescendants()) do
-				if v:IsA("TouchTransmitter") then
-					local chest=v.Parent
-					if chest and chest:FindFirstChild("TouchInterest") then
-						TweenTo(chest.Position+Vector3.new(0,3,0))
-						firetouchinterest(player.Character.HumanoidRootPart,chest,0)
-						firetouchinterest(player.Character.HumanoidRootPart,chest,1)
-					end
-				end
-			end
-		end
-	end
-end)
-
-task.spawn(function()
-	while task.wait(1) do
-		if _G.AutoBoss then
-			if HasFOD() then
-				SummonBoss()
-				task.wait(5)
-			end
-			local boss=GetBoss()
-			if boss then
-				repeat task.wait()
-					if not _G.SmartDodge then
-						TweenTo(boss.HumanoidRootPart.Position+Vector3.new(0,10,0))
-					end
-					local tool=player.Character:FindFirstChildOfClass("Tool")
-					if tool then tool:Activate() end
-				until not boss or boss.Humanoid.Health<=0
-			end
-		end
-	end
-end)
-
-task.spawn(function()
-	while task.wait(1) do
-		if _G.AutoHaki then
-			pcall(function()
-				if not player.Character:FindFirstChild("HasBuso") then
-					ReplicatedStorage.Remotes.CommF_:InvokeServer("Buso")
-				end
-			end)
-		end
-	end
-end)
-
-task.spawn(function()
-	while task.wait(0.05) do
-		if _G.FastAttack then
-			local tool=player.Character and player.Character:FindFirstChildOfClass("Tool")
-			if tool then tool:Activate() end
-		end
-	end
-end)
-
-task.spawn(function()
-	while task.wait(0.2) do
-		if _G.BringMob then
-			for _,v in pairs(workspace.Enemies:GetChildren()) do
-				if v:FindFirstChild("HumanoidRootPart") and v.Humanoid.Health>0 then
-					v.HumanoidRootPart.CanCollide=false
-					v.HumanoidRootPart.Size=Vector3.new(60,60,60)
-					v.HumanoidRootPart.CFrame=player.Character.HumanoidRootPart.CFrame*CFrame.new(0,0,-5)
-				end
-			end
-		end
-	end
-end)
-
-local safeOffsets={Vector3.new(15,15,0),Vector3.new(-15,15,0),Vector3.new(0,15,15),Vector3.new(0,15,-15)}
-local attackOffsets={Vector3.new(6,10,6),Vector3.new(-6,10,6),Vector3.new(-6,10,-6),Vector3.new(6,10,-6)}
-
-task.spawn(function()
-	local i=1
-	while task.wait(0.12) do
-		if _G.SmartDodge then
-			local boss=GetBoss()
-			local char=player.Character
-			if boss and char and char:FindFirstChild("HumanoidRootPart") then
-				local pos
-				if IsBossCasting(boss) then
-					pos=boss.HumanoidRootPart.Position+safeOffsets[i]
-				else
-					pos=boss.HumanoidRootPart.Position+attackOffsets[i]
-				end
-				char.HumanoidRootPart.CFrame=CFrame.new(pos,boss.HumanoidRootPart.Position)
-				i=i+1 if i>4 then i=1 end
+			local chest = GetNearestChest()
+			if chest then
+				TweenTo(chest.Position + Vector3.new(0,3,0))
+				firetouchinterest(player.Character.HumanoidRootPart, chest, 0)
+				firetouchinterest(player.Character.HumanoidRootPart, chest, 1)
 			end
 		end
 	end
