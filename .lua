@@ -1,22 +1,28 @@
 -------------------------------------------------
+-- SERVICES
+-------------------------------------------------
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local TeleportService = game:GetService("TeleportService")
+local UIS = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Stats = game:GetService("Stats")
+local HttpService = game:GetService("HttpService")
+
+local player = Players.LocalPlayer
+
+-------------------------------------------------
 -- SAVE SYSTEM
 -------------------------------------------------
-local HttpService = game:GetService("HttpService")
-local FileName = "PoomHub_Config.json"
+local FileName = "PoomDarkcoat.json"
 
 local Config = {
-	AutoChest = false,
-	AutoBoss = false,
-	BringMob = false,
-	FastAttack = false,
-	AutoHaki = false,
-	SmartDodge = false
+	AutoFarmDarkcoat = false
 }
 
 if isfile and isfile(FileName) then
-	local data = readfile(FileName)
-	local decoded = HttpService:JSONDecode(data)
-	for k,v in pairs(decoded) do
+	local data = HttpService:JSONDecode(readfile(FileName))
+	for k,v in pairs(data) do
 		Config[k] = v
 	end
 end
@@ -27,201 +33,45 @@ function SaveConfig()
 	end
 end
 
--------------------------------------------------
--- UI
--------------------------------------------------
-local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
+_G.AutoFarmDarkcoat = Config.AutoFarmDarkcoat
+_G.DarkcoatStatus = "Idle"
 
-local MainFrame = Instance.new("Frame", ScreenGui)
-MainFrame.Size = UDim2.new(0,220,0,260)
-MainFrame.Position = UDim2.new(0,20,0.3,0)
-MainFrame.BackgroundColor3 = Color3.fromRGB(25,25,25)
-
-local TopBar = Instance.new("Frame", MainFrame)
-TopBar.Size = UDim2.new(1,0,0,30)
-TopBar.BackgroundColor3 = Color3.fromRGB(20,20,20)
-
-local Title = Instance.new("TextLabel", TopBar)
-Title.Size = UDim2.new(0.7,0,1,0)
-Title.BackgroundTransparency = 1
-Title.Text = "Poom Hub"
-Title.TextColor3 = Color3.new(1,1,1)
-Title.TextScaled = true
-
-local MinBtn = Instance.new("TextButton", TopBar)
-MinBtn.Size = UDim2.new(0.3,0,1,0)
-MinBtn.Position = UDim2.new(0.7,0,0,0)
-MinBtn.Text = "-"
-MinBtn.BackgroundColor3 = Color3.fromRGB(50,50,50)
-MinBtn.TextColor3 = Color3.new(1,1,1)
-MinBtn.TextScaled = true
-
-local Container = Instance.new("Frame", MainFrame)
-Container.Size = UDim2.new(1,0,1,-30)
-Container.Position = UDim2.new(0,0,0,30)
-Container.BackgroundTransparency = 1
-
-local UIList = Instance.new("UIListLayout", Container)
-UIList.Padding = UDim.new(0,5)
-
--------------------------------------------------
--- DRAG
--------------------------------------------------
-local UIS = game:GetService("UserInputService")
-local dragging, startPos, startFramePos
-
-TopBar.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 then
-		dragging = true
-		startPos = input.Position
-		startFramePos = MainFrame.Position
-		input.Changed:Connect(function()
-			if input.UserInputState == Enum.UserInputState.End then dragging = false end
-		end)
-	end
-end)
-
-UIS.InputChanged:Connect(function(input)
-	if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-		local delta = input.Position - startPos
-		MainFrame.Position = UDim2.new(
-			startFramePos.X.Scale,
-			startFramePos.X.Offset + delta.X,
-			startFramePos.Y.Scale,
-			startFramePos.Y.Offset + delta.Y
-		)
-	end
-end)
-
--------------------------------------------------
--- MINIMIZE
--------------------------------------------------
-local minimized=false
-MinBtn.MouseButton1Click:Connect(function()
-	minimized = not minimized
-	if minimized then
-		Container.Visible=false
-		MainFrame:TweenSize(UDim2.new(0,220,0,30),"Out","Quad",0.25,true)
-		MinBtn.Text="+"
-	else
-		Container.Visible=true
-		MainFrame:TweenSize(UDim2.new(0,220,0,260),"Out","Quad",0.25,true)
-		MinBtn.Text="-"
-	end
-end)
-
--------------------------------------------------
--- TOGGLE
--------------------------------------------------
-function CreateToggle(name,key,callback)
-	local btn = Instance.new("TextButton", Container)
-	btn.Size = UDim2.new(1,-10,0,35)
-	btn.TextColor3 = Color3.new(1,1,1)
-	
-	local state = Config[key]
-	btn.Text = name.." : "..(state and "ON" or "OFF")
-	btn.BackgroundColor3 = state and Color3.fromRGB(0,170,0) or Color3.fromRGB(40,40,40)
-	
-	callback(state)
-	
-	btn.MouseButton1Click:Connect(function()
-		state = not state
-		btn.Text = name.." : "..(state and "ON" or "OFF")
-		btn.BackgroundColor3 = state and Color3.fromRGB(0,170,0) or Color3.fromRGB(40,40,40)
-		
-		Config[key] = state
-		SaveConfig()
-		
-		callback(state)
-	end)
-end
-
--------------------------------------------------
--- GLOBAL
--------------------------------------------------
-_G.AutoChest = Config.AutoChest
-_G.AutoBoss = Config.AutoBoss
-_G.BringMob = Config.BringMob
-_G.FastAttack = Config.FastAttack
-_G.AutoHaki = Config.AutoHaki
-_G.SmartDodge = Config.SmartDodge
-
--------------------------------------------------
--- SERVICES
--------------------------------------------------
-local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local player = Players.LocalPlayer
-
--------------------------------------------------
--- FIX TWEEN (นิ่ง)
--------------------------------------------------
-function TweenTo(pos)
-	local char = player.Character
-	if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-	
-	local hrp = char.HumanoidRootPart
-	local hum = char:FindFirstChild("Humanoid")
-	
-	if hrp:FindFirstChild("Tweening") then return end
-	local flag = Instance.new("BoolValue", hrp)
-	flag.Name = "Tweening"
-	
-	pos = Vector3.new(pos.X, hrp.Position.Y, pos.Z)
-	
-	if hum then
-		hum:ChangeState(Enum.HumanoidStateType.Physics)
-		for _,v in pairs(hum:GetPlayingAnimationTracks()) do
-			v:Stop()
-		end
-	end
-	
-	local distance = (hrp.Position - pos).Magnitude
-	
-	local tween = TweenService:Create(
-		hrp,
-		TweenInfo.new(distance/260, Enum.EasingStyle.Linear),
-		{CFrame = CFrame.new(pos)}
-	)
-	
-	tween:Play()
-	tween.Completed:Wait()
-	
-	if hum then
-		hum:ChangeState(Enum.HumanoidStateType.Running)
-	end
-	
-	flag:Destroy()
-end
+-- 🧠 SERVER SYSTEM
+_G.ServerStatus = "Idle"
+_G.HopLow = false
 
 -------------------------------------------------
 -- FUNCTIONS
 -------------------------------------------------
 function HasFOD()
+	local char = player.Character
+	if not char then return false end
+	
 	for _,v in pairs(player.Backpack:GetChildren()) do
-		if v.Name=="First of Darkness" then return true end
+		if v.Name == "First of Darkness" then return true end
 	end
-	for _,v in pairs(player.Character:GetChildren()) do
-		if v.Name=="First of Darkness" then return true end
+	
+	for _,v in pairs(char:GetChildren()) do
+		if v.Name == "First of Darkness" then return true end
 	end
+	
 	return false
 end
 
--------------------------------------------------
--- FIX AUTO CHEST
--------------------------------------------------
-function GetChests()
-	local list = {}
-	for _,v in pairs(workspace:GetDescendants()) do
-		if v:IsA("TouchTransmitter") then
-			local chest = v.Parent
-			if chest and chest:IsA("BasePart") then
-				table.insert(list, chest)
-			end
-		end
-	end
-	return list
+function TweenTo(pos)
+	local char = player.Character
+	if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+	
+	local hrp = char.HumanoidRootPart
+	local dist = (hrp.Position - pos).Magnitude
+	
+	local tween = TweenService:Create(
+		hrp,
+		TweenInfo.new(dist/250, Enum.EasingStyle.Linear),
+		{CFrame = CFrame.new(pos)}
+	)
+	tween:Play()
+	tween.Completed:Wait()
 end
 
 function GetNearestChest()
@@ -229,34 +79,354 @@ function GetNearestChest()
 	if not char or not char:FindFirstChild("HumanoidRootPart") then return end
 	
 	local hrp = char.HumanoidRootPart
-	local chests = GetChests()
+	local nearest, dist = nil, math.huge
 	
-	table.sort(chests, function(a,b)
-		return (a.Position - hrp.Position).Magnitude < (b.Position - hrp.Position).Magnitude
-	end)
+	for _,v in pairs(workspace:GetDescendants()) do
+		if v:IsA("TouchTransmitter") then
+			local chest = v.Parent
+			if chest and chest:IsA("BasePart") then
+				local d = (chest.Position - hrp.Position).Magnitude
+				if d < dist then
+					dist = d
+					nearest = chest
+				end
+			end
+		end
+	end
 	
-	return chests[1]
+	return nearest
 end
 
-task.spawn(function()
-	while task.wait(0.4) do
-		if _G.AutoChest and not HasFOD() then
-			local chest = GetNearestChest()
-			if chest then
-				TweenTo(chest.Position + Vector3.new(0,3,0))
-				firetouchinterest(player.Character.HumanoidRootPart, chest, 0)
-				firetouchinterest(player.Character.HumanoidRootPart, chest, 1)
+function GetBoss()
+	for _,v in pairs(workspace:GetDescendants()) do
+		if v.Name == "Darkbeard" and v:FindFirstChild("Humanoid") then
+			if v.Humanoid.Health > 0 then
+				return v
 			end
+		end
+	end
+end
+
+function SummonBoss()
+	for _,v in pairs(workspace:GetDescendants()) do
+		if v.Name:lower():find("altar") then
+			_G.DarkcoatStatus = "Summoning Boss"
+			TweenTo(v.Position + Vector3.new(0,5,0))
+			task.wait(1)
+			
+			local tool = player.Backpack:FindFirstChild("First of Darkness")
+			if tool then
+				player.Character.Humanoid:EquipTool(tool)
+				tool:Activate()
+			end
+			break
+		end
+	end
+end
+
+-------------------------------------------------
+-- 🧠 HOP LOW (SCAN ทุกหน้า + เลือกคนน้อยสุด)
+-------------------------------------------------
+function HopLowServer()
+	_G.ServerStatus = "Scanning..."
+
+	local cursor = ""
+	local bestServer = nil
+	local lowest = math.huge
+
+	repeat
+		local url = "https://games.roblox.com/v1/games/"..game.PlaceId.."/servers/Public?limit=100&sortOrder=Asc"
+		if cursor ~= "" then
+			url = url.."&cursor="..cursor
+		end
+
+		local res = HttpService:JSONDecode(game:HttpGet(url))
+
+		for _,v in pairs(res.data) do
+			if v.playing < v.maxPlayers then
+				if v.playing < lowest then
+					lowest = v.playing
+					bestServer = v.id
+				end
+			end
+		end
+
+		cursor = res.nextPageCursor or ""
+		task.wait(0.1)
+
+	until cursor == ""
+
+	if bestServer then
+		_G.ServerStatus = "Found ("..lowest.." players)"
+		task.wait(1)
+
+		_G.ServerStatus = "Hopping..."
+		TeleportService:TeleportToPlaceInstance(game.PlaceId, bestServer)
+	else
+		_G.ServerStatus = "No Server Found"
+	end
+end
+
+-------------------------------------------------
+-- LOOP
+-------------------------------------------------
+task.spawn(function()
+	while task.wait(0.3) do
+		
+		if _G.AutoFarmDarkcoat then
+			
+			local char = player.Character
+			if char and char:FindFirstChild("HumanoidRootPart") then
+				
+				local hrp = char.HumanoidRootPart
+				
+				if not HasFOD() then
+					_G.DarkcoatStatus = "Farming Chest"
+					
+					local chest = GetNearestChest()
+					if chest then
+						TweenTo(chest.Position + Vector3.new(0,3,0))
+						firetouchinterest(hrp, chest, 0)
+						firetouchinterest(hrp, chest, 1)
+					end
+					
+				else
+					local boss = GetBoss()
+					
+					if not boss then
+						SummonBoss()
+						task.wait(5)
+					else
+						_G.DarkcoatStatus = "Killing Boss"
+						
+						repeat task.wait()
+							if boss:FindFirstChild("HumanoidRootPart") then
+								hrp.CFrame = boss.HumanoidRootPart.CFrame * CFrame.new(0,10,0)
+							end
+							
+							local tool = char:FindFirstChildOfClass("Tool")
+							if tool then tool:Activate() end
+							
+						until not boss or boss.Humanoid.Health <= 0
+					end
+				end
+			end
+		else
+			_G.DarkcoatStatus = "N/A"
 		end
 	end
 end)
 
 -------------------------------------------------
--- TOGGLES
+-- GUI
 -------------------------------------------------
-CreateToggle("Auto Chest","AutoChest", function(v) _G.AutoChest=v end)
-CreateToggle("Auto Boss","AutoBoss", function(v) _G.AutoBoss=v end)
-CreateToggle("Bring Mob","BringMob", function(v) _G.BringMob=v end)
-CreateToggle("Fast Attack","FastAttack", function(v) _G.FastAttack=v end)
-CreateToggle("Auto Haki","AutoHaki", function(v) _G.AutoHaki=v end)
-CreateToggle("Smart Dodge","SmartDodge", function(v) _G.SmartDodge=v end)
+local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
+ScreenGui.ResetOnSpawn = false
+
+local Main = Instance.new("Frame", ScreenGui)
+Main.Size = UDim2.new(0,0,0,0)
+Main.Position = UDim2.new(0.5,-175,0.5,-125)
+Main.BackgroundColor3 = Color3.fromRGB(18,18,18)
+Instance.new("UICorner", Main)
+
+Main:TweenSize(UDim2.new(0,350,0,320),"Out","Back",0.4,true)
+
+local Top = Instance.new("Frame", Main)
+Top.Size = UDim2.new(1,0,0,35)
+Top.BackgroundColor3 = Color3.fromRGB(25,25,25)
+
+local Title = Instance.new("TextLabel", Top)
+Title.Size = UDim2.new(1,0,1,0)
+Title.BackgroundTransparency = 1
+Title.TextColor3 = Color3.new(1,1,1)
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 14
+
+-------------------------------------------------
+-- FPS / PING
+-------------------------------------------------
+local fps, currentFPS, last = 0,0,tick()
+RunService.RenderStepped:Connect(function()
+	fps+=1
+	if tick()-last>=1 then
+		currentFPS=fps
+		fps=0
+		last=tick()
+	end
+end)
+
+task.spawn(function()
+	while task.wait(1) do
+		local timeNow=os.date("%H:%M:%S")
+		local ping=math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())
+		Title.Text="Poom Edit | "..timeNow.." | "..ping.." ms | "..currentFPS.." FPS"
+	end
+end)
+
+-------------------------------------------------
+-- DARKCOAT SECTION
+-------------------------------------------------
+local Section = Instance.new("Frame", Main)
+Section.Size = UDim2.new(1,-10,0,120)
+Section.Position = UDim2.new(0,5,0,45)
+Section.BackgroundColor3 = Color3.fromRGB(28,28,28)
+
+local StatusLabel = Instance.new("TextLabel", Section)
+StatusLabel.Size = UDim2.new(1,-10,0,25)
+StatusLabel.Position = UDim2.new(0,5,0,70)
+StatusLabel.BackgroundTransparency = 1
+StatusLabel.TextColor3 = Color3.new(1,1,1)
+
+task.spawn(function()
+	while task.wait(0.2) do
+		StatusLabel.Text = "Status: ".._G.DarkcoatStatus
+	end
+end)
+
+-------------------------------------------------
+-- TOGGLE
+-------------------------------------------------
+local function CreateToggle(parent, text, key)
+	local Frame = Instance.new("Frame", parent)
+	Frame.Size = UDim2.new(1,-10,0,35)
+	Frame.Position = UDim2.new(0,5,0,35)
+
+	local Label = Instance.new("TextLabel", Frame)
+	Label.Size = UDim2.new(0.6,0,1,0)
+	Label.BackgroundTransparency = 1
+	Label.Text = text
+	Label.TextColor3 = Color3.new(1,1,1)
+
+	local Toggle = Instance.new("Frame", Frame)
+	Toggle.Size = UDim2.new(0,45,0,22)
+	Toggle.Position = UDim2.new(1,-50,0.5,-11)
+	Toggle.BackgroundColor3 = Color3.fromRGB(50,50,50)
+
+	local Circle = Instance.new("Frame", Toggle)
+	Circle.Size = UDim2.new(0,18,0,18)
+	Circle.Position = UDim2.new(0,2,0.5,-9)
+	Circle.BackgroundColor3 = Color3.new(1,1,1)
+
+	local state = Config[key]
+
+	local function Update()
+		if state then
+			Toggle.BackgroundColor3 = Color3.fromRGB(0,170,255)
+			Circle:TweenPosition(UDim2.new(1,-20,0.5,-9),"Out","Sine",0.2,true)
+		else
+			Toggle.BackgroundColor3 = Color3.fromRGB(50,50,50)
+			Circle:TweenPosition(UDim2.new(0,2,0.5,-9),"Out","Sine",0.2,true)
+		end
+		_G[key] = state
+	end
+
+	Update()
+
+	Toggle.InputBegan:Connect(function(input)
+		if input.UserInputType.Name:find("Mouse") then
+			state = not state
+			Config[key] = state
+			SaveConfig()
+			Update()
+		end
+	end)
+end
+
+CreateToggle(Section,"Auto Darkcoat","AutoFarmDarkcoat")
+
+-------------------------------------------------
+-- SERVER SECTION
+-------------------------------------------------
+local ServerSection = Instance.new("Frame", Main)
+ServerSection.Size = UDim2.new(1,-10,0,120)
+ServerSection.Position = UDim2.new(0,5,0,180)
+ServerSection.BackgroundColor3 = Color3.fromRGB(28,28,28)
+
+local ServerLabel = Instance.new("TextLabel", ServerSection)
+ServerLabel.Size = UDim2.new(1,-10,0,25)
+ServerLabel.Position = UDim2.new(0,5,0,80)
+ServerLabel.BackgroundTransparency = 1
+ServerLabel.TextColor3 = Color3.new(1,1,1)
+
+task.spawn(function()
+	while task.wait(0.2) do
+		ServerLabel.Text = "Status: ".._G.ServerStatus
+	end
+end)
+
+-- Hop Button
+local HopBtn = Instance.new("TextButton", ServerSection)
+HopBtn.Size = UDim2.new(1,-10,0,35)
+HopBtn.Position = UDim2.new(0,5,0,40)
+HopBtn.Text = "Hop Server"
+HopBtn.BackgroundColor3 = Color3.fromRGB(0,170,255)
+
+HopBtn.MouseButton1Click:Connect(function()
+	_G.ServerStatus = "Hopping..."
+	TeleportService:Teleport(game.PlaceId)
+end)
+
+-- Toggle Hop Low
+local function CreateServerToggle(parent)
+	local Frame = Instance.new("Frame", parent)
+	Frame.Size = UDim2.new(1,-10,0,35)
+	Frame.Position = UDim2.new(0,5,0,0)
+
+	local Toggle = Instance.new("Frame", Frame)
+	Toggle.Size = UDim2.new(0,45,0,22)
+	Toggle.Position = UDim2.new(1,-50,0.5,-11)
+	Toggle.BackgroundColor3 = Color3.fromRGB(50,50,50)
+
+	local Circle = Instance.new("Frame", Toggle)
+	Circle.Size = UDim2.new(0,18,0,18)
+	Circle.Position = UDim2.new(0,2,0.5,-9)
+	Circle.BackgroundColor3 = Color3.new(1,1,1)
+
+	local state = false
+
+	Toggle.InputBegan:Connect(function(input)
+		if input.UserInputType.Name:find("Mouse") then
+			state = not state
+
+			if state then
+				_G.HopLow = true
+				Toggle.BackgroundColor3 = Color3.fromRGB(0,170,255)
+				Circle:TweenPosition(UDim2.new(1,-20,0.5,-9),"Out","Sine",0.2,true)
+
+				task.spawn(function()
+					while _G.HopLow do
+						HopLowServer()
+						task.wait(10)
+					end
+				end)
+
+			else
+				_G.HopLow = false
+				_G.ServerStatus = "Stopped"
+				Toggle.BackgroundColor3 = Color3.fromRGB(50,50,50)
+				Circle:TweenPosition(UDim2.new(0,2,0.5,-9),"Out","Sine",0.2,true)
+			end
+		end
+	end)
+end
+
+CreateServerToggle(ServerSection)
+
+-------------------------------------------------
+-- DRAG
+-------------------------------------------------
+local dragging, dragStart, startPos
+Top.InputBegan:Connect(function(input)
+	if input.UserInputType.Name:find("Mouse") then
+		dragging=true
+		dragStart=input.Position
+		startPos=Main.Position
+	end
+end)
+
+UIS.InputChanged:Connect(function(input)
+	if dragging then
+		local delta=input.Position-dragStart
+		Main.Position=UDim2.new(startPos.X.Scale,startPos.X.Offset+delta.X,startPos.Y.Scale,startPos.Y.Offset+delta.Y)
+	end
+end)
