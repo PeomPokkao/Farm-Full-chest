@@ -17,7 +17,7 @@ local player = Players.LocalPlayer
 local FileName = "PoomDarkcoat.json"
 
 local Config = {
-	AutoFarmDarkcoat = false
+	AutoFarmDarkcoat = true -- เปิดเองตาม Config
 }
 
 if isfile and isfile(FileName) then
@@ -46,11 +46,11 @@ function HasFOD()
 	if not char then return false end
 	
 	for _,v in pairs(player.Backpack:GetChildren()) do
-		if v.Name == "First of Darkness" then return true end
+		if v.Name == "Fist of Darkness" then return true end
 	end
 	
 	for _,v in pairs(char:GetChildren()) do
-		if v.Name == "First of Darkness" then return true end
+		if v.Name == "Fist of Darkness" then return true end
 	end
 	
 	return false
@@ -112,7 +112,7 @@ function SummonBoss()
 			TweenTo(v.Position + Vector3.new(0,5,0))
 			task.wait(1)
 			
-			local tool = player.Backpack:FindFirstChild("First of Darkness")
+			local tool = player.Backpack:FindFirstChild("Fist of Darkness")
 			if tool then
 				player.Character.Humanoid:EquipTool(tool)
 				tool:Activate()
@@ -246,7 +246,7 @@ task.spawn(function()
 end)
 
 -------------------------------------------------
--- DARKCOAT SECTION + TOGGLE
+-- DARKCOAT SECTION
 -------------------------------------------------
 local Section = Instance.new("Frame", Main)
 Section.Size = UDim2.new(1,-10,0,120)
@@ -265,7 +265,9 @@ task.spawn(function()
 	end
 end)
 
--- Toggle Function (แก้แล้วให้กดได้)
+-------------------------------------------------
+-- TOGGLE AUTO DARKCOAT
+-------------------------------------------------
 local function CreateToggle(parent, text, key)
 	local Frame = Instance.new("Frame", parent)
 	Frame.Size = UDim2.new(1,-10,0,35)
@@ -277,11 +279,11 @@ local function CreateToggle(parent, text, key)
 	Label.Text = text
 	Label.TextColor3 = Color3.new(1,1,1)
 
-	local Toggle = Instance.new("TextButton", Frame) -- เปลี่ยนเป็น TextButton
+	local Toggle = Instance.new("Frame", Frame)
 	Toggle.Size = UDim2.new(0,45,0,22)
 	Toggle.Position = UDim2.new(1,-50,0.5,-11)
 	Toggle.BackgroundColor3 = Color3.fromRGB(50,50,50)
-	Toggle.Text = ""
+
 	local Circle = Instance.new("Frame", Toggle)
 	Circle.Size = UDim2.new(0,18,0,18)
 	Circle.Position = UDim2.new(0,2,0.5,-9)
@@ -302,18 +304,20 @@ local function CreateToggle(parent, text, key)
 
 	Update()
 
-	Toggle.MouseButton1Click:Connect(function()
-		state = not state
-		Config[key] = state
-		SaveConfig()
-		Update()
+	Toggle.InputBegan:Connect(function(input)
+		if input.UserInputType.Name:find("Mouse") then
+			state = not state
+			Config[key] = state
+			SaveConfig()
+			Update()
+		end
 	end)
 end
 
 CreateToggle(Section,"Auto Darkcoat","AutoFarmDarkcoat")
 
 -------------------------------------------------
--- SERVER SECTION + Hop Toggle
+-- SERVER SECTION
 -------------------------------------------------
 local ServerSection = Instance.new("Frame", Main)
 ServerSection.Size = UDim2.new(1,-10,0,120)
@@ -338,6 +342,7 @@ HopBtn.Size = UDim2.new(1,-10,0,35)
 HopBtn.Position = UDim2.new(0,5,0,40)
 HopBtn.Text = "Hop Server"
 HopBtn.BackgroundColor3 = Color3.fromRGB(0,170,255)
+
 HopBtn.MouseButton1Click:Connect(function()
 	_G.ServerStatus = "Hopping..."
 	TeleportService:Teleport(game.PlaceId)
@@ -349,11 +354,11 @@ local function CreateServerToggle(parent)
 	Frame.Size = UDim2.new(1,-10,0,35)
 	Frame.Position = UDim2.new(0,5,0,0)
 
-	local Toggle = Instance.new("TextButton", Frame) -- แก้เป็น TextButton
+	local Toggle = Instance.new("Frame", Frame)
 	Toggle.Size = UDim2.new(0,45,0,22)
 	Toggle.Position = UDim2.new(1,-50,0.5,-11)
 	Toggle.BackgroundColor3 = Color3.fromRGB(50,50,50)
-	Toggle.Text = ""
+
 	local Circle = Instance.new("Frame", Toggle)
 	Circle.Size = UDim2.new(0,18,0,18)
 	Circle.Position = UDim2.new(0,2,0.5,-9)
@@ -361,23 +366,27 @@ local function CreateServerToggle(parent)
 
 	local state = false
 
-	Toggle.MouseButton1Click:Connect(function()
-		state = not state
-		if state then
-			_G.HopLow = true
-			Toggle.BackgroundColor3 = Color3.fromRGB(0,170,255)
-			Circle:TweenPosition(UDim2.new(1,-20,0.5,-9),"Out","Sine",0.2,true)
-			task.spawn(function()
-				while _G.HopLow do
-					HopLowServer()
-					task.wait(10)
-				end
-			end)
-		else
-			_G.HopLow = false
-			_G.ServerStatus = "Stopped"
-			Toggle.BackgroundColor3 = Color3.fromRGB(50,50,50)
-			Circle:TweenPosition(UDim2.new(0,2,0.5,-9),"Out","Sine",0.2,true)
+	Toggle.InputBegan:Connect(function(input)
+		if input.UserInputType.Name:find("Mouse") then
+			state = not state
+
+			if state then
+				_G.HopLow = true
+				Toggle.BackgroundColor3 = Color3.fromRGB(0,170,255)
+				Circle:TweenPosition(UDim2.new(1,-20,0.5,-9),"Out","Sine",0.2,true)
+
+				task.spawn(function()
+					while _G.HopLow do
+						HopLowServer()
+						task.wait(10)
+					end
+				end)
+			else
+				_G.HopLow = false
+				_G.ServerStatus = "Stopped"
+				Toggle.BackgroundColor3 = Color3.fromRGB(50,50,50)
+				Circle:TweenPosition(UDim2.new(0,2,0.5,-9),"Out","Sine",0.2,true)
+			end
 		end
 	end)
 end
