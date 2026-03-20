@@ -6,19 +6,21 @@ local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local Stats = game:GetService("Stats")
 local HttpService = game:GetService("HttpService")
+
 local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui") -- รอ PlayerGui
 
 -- SAVE SYSTEM
 local FileName = "PoomDarkcoat.json"
-local Config = { AutoFarmDarkcoat = false }
-
+local Config = {AutoFarmDarkcoat = false}
 if isfile and isfile(FileName) then
     local data = HttpService:JSONDecode(readfile(FileName))
     for k,v in pairs(data) do Config[k] = v end
 end
-
 function SaveConfig()
-    if writefile then writefile(FileName, HttpService:JSONEncode(Config)) end
+    if writefile then
+        writefile(FileName, HttpService:JSONEncode(Config))
+    end
 end
 
 _G.AutoFarmDarkcoat = Config.AutoFarmDarkcoat
@@ -26,40 +28,31 @@ _G.DarkcoatStatus = "Idle"
 _G.ServerStatus = "Idle"
 _G.HopLow = false
 
--- FLUENT UI
-local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
-local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
-local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
-
-local ScreenGui = Instance.new("ScreenGui", player:WaitForChild("PlayerGui"))
-ScreenGui.ResetOnSpawn = false
-
-local Window = Fluent:CreateWindow({
-    Parent = ScreenGui,
-    Title = "Poom Edit",
-    SubTitle = "Darkcoat + AutoFarm",
-    Size = UDim2.fromOffset(500,400),
-    Acrylic = true,
-    Theme = "Dark"
-})
-
-local Tabs = {
-    Main = Window:AddTab({ Title = "Main" }),
-    Settings = Window:AddTab({ Title = "Settings" })
-}
-
-local Options = Fluent.Options
-
--- FUNCTION: Check Fist of Darkness
-function HasFOD()
-    local char = player.Character
-    if not char then return false end
-    for _,v in pairs(player.Backpack:GetChildren()) do if v.Name == "Fist of Darkness" then return true end end
-    for _,v in pairs(char:GetChildren()) do if v.Name == "Fist of Darkness" then return true end end
+-- FUNCTIONS
+local BlacklistModels = {"Door","Dofamingo","Swan's Room"}
+local function IsBlacklisted(part)
+    local obj = part
+    while obj and obj ~= workspace do
+        for _,name in pairs(BlacklistModels) do
+            if obj.Name:lower():find(name:lower()) then return true end
+        end
+        obj = obj.Parent
+    end
     return false
 end
 
--- FUNCTION: Tween to Position
+function HasFOD()
+    local char = player.Character
+    if not char then return false end
+    for _,v in pairs(player.Backpack:GetChildren()) do
+        if v.Name == "Fist of Darkness" then return true end
+    end
+    for _,v in pairs(char:GetChildren()) do
+        if v.Name == "Fist of Darkness" then return true end
+    end
+    return false
+end
+
 function TweenTo(pos)
     local char = player.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return end
@@ -70,48 +63,31 @@ function TweenTo(pos)
     tween.Completed:Wait()
 end
 
--- FUNCTION: Chest Blacklist
-local BlacklistModels = {"Door","Dofamingo","Swan's Room"}
-function IsBlacklisted(part)
-    if not part or not part.Parent then return false end
-    local parentName = part.Parent.Name:lower()
-    for _,name in pairs(BlacklistModels) do
-        if parentName:find(name:lower()) then return true end
-    end
-    return false
-end
-
--- FUNCTION: Get Nearest Chest
 function GetNearestChest()
     local char = player.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return end
     local hrp = char.HumanoidRootPart
     local nearest, dist = nil, math.huge
     for _,v in pairs(workspace:GetDescendants()) do
-        if v:IsA("TouchTransmitter") then
-            local chest = v.Parent
-            if chest and chest:IsA("BasePart") and chest.Name:lower():find("chest") and not IsBlacklisted(chest) then
-                local d = (chest.Position - hrp.Position).Magnitude
-                if d < dist then
-                    dist = d
-                    nearest = chest
-                end
+        if v:IsA("BasePart") and v.Name:lower():find("chest") and not IsBlacklisted(v) then
+            local d = (v.Position - hrp.Position).Magnitude
+            if d < dist then
+                dist = d
+                nearest = v
             end
         end
     end
     return nearest
 end
 
--- FUNCTION: Get Boss
 function GetBoss()
     for _,v in pairs(workspace:GetDescendants()) do
-        if v.Name == "Darkbeard" and v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 then
-            return v
+        if v.Name == "Darkbeard" and v:FindFirstChild("Humanoid") then
+            if v.Humanoid.Health > 0 then return v end
         end
     end
 end
 
--- FUNCTION: Summon Boss
 function SummonBoss()
     for _,v in pairs(workspace:GetDescendants()) do
         if v.Name:lower():find("altar") then
@@ -128,7 +104,6 @@ function SummonBoss()
     end
 end
 
--- HOP LOW SERVER
 function HopLowServer()
     _G.ServerStatus = "Scanning..."
     local cursor, bestServer, lowest = "", nil, math.huge
@@ -158,59 +133,88 @@ end
 -- AUTO FARM LOOP
 task.spawn(function()
     while task.wait(0.3) do
-        if _G.AutoFarmDarkcoat then
-            local char = player.Character
-            if char and char:FindFirstChild("HumanoidRootPart") then
-                local hrp = char.HumanoidRootPart
-                if not HasFOD() then
-                    _G.DarkcoatStatus = "Farming Chest"
-                    local chest = GetNearestChest()
-                    if chest then
-                        TweenTo(chest.Position + Vector3.new(0,3,0))
-                        firetouchinterest(hrp, chest, 0)
-                        firetouchinterest(hrp, chest, 1)
-                    end
+        local char = player.Character
+        if _G.AutoFarmDarkcoat and char and char:FindFirstChild("HumanoidRootPart") then
+            local hrp = char.HumanoidRootPart
+            if not HasFOD() then
+                _G.DarkcoatStatus = "Farming Chest"
+                local chest = GetNearestChest()
+                if chest then
+                    TweenTo(chest.Position + Vector3.new(0,3,0))
+                    firetouchinterest(hrp, chest, 0)
+                    firetouchinterest(hrp, chest, 1)
+                end
+            else
+                local boss = GetBoss()
+                if not boss then
+                    SummonBoss()
+                    task.wait(5)
                 else
-                    local boss = GetBoss()
-                    if not boss then
-                        SummonBoss()
-                        task.wait(5)
-                    else
-                        _G.DarkcoatStatus = "Killing Boss"
-                        repeat task.wait()
-                            if boss:FindFirstChild("HumanoidRootPart") then
-                                hrp.CFrame = boss.HumanoidRootPart.CFrame * CFrame.new(0,10,0)
-                            end
-                            local tool = char:FindFirstChildOfClass("Tool")
-                            if tool then tool:Activate() end
-                        until not boss or boss.Humanoid.Health <= 0
-                    end
+                    _G.DarkcoatStatus = "Killing Boss"
+                    repeat task.wait()
+                        if boss:FindFirstChild("HumanoidRootPart") then
+                            hrp.CFrame = boss.HumanoidRootPart.CFrame * CFrame.new(0,10,0)
+                        end
+                        local tool = char:FindFirstChildOfClass("Tool")
+                        if tool then tool:Activate() end
+                    until not boss or boss.Humanoid.Health <= 0
                 end
             end
         else
-            _G.DarkcoatStatus = "Idle"
+            _G.DarkcoatStatus = "N/A"
         end
     end
 end)
 
--- FLUENT UI ELEMENTS
-local AutoToggle = Tabs.Main:AddToggle("AutoDarkcoat", {
-    Title = "Auto Darkcoat",
-    Default = Config.AutoFarmDarkcoat
+-- ===== FLUENT UI =====
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
+local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
+
+local Window = Fluent:CreateWindow({
+    Parent = playerGui,
+    Title = "Poom Edit",
+    SubTitle = "Darkcoat + AutoFarm",
+    Size = UDim2.fromOffset(500,400),
+    Acrylic = true,
+    Theme = "Dark"
 })
-AutoToggle:OnChanged(function(state)
-    _G.AutoFarmDarkcoat = state
-    Config.AutoFarmDarkcoat = state
+
+local Tabs = {
+    Main = Window:AddTab({Title = "Main"}),
+    Settings = Window:AddTab({Title = "Settings"})
+}
+
+local Options = Fluent.Options
+
+-- Auto Darkcoat Toggle
+local AutoToggle = Tabs.Main:AddToggle("AutoDarkcoat", {Title="Auto Darkcoat", Default=Config.AutoFarmDarkcoat})
+AutoToggle:OnChanged(function()
+    Config.AutoFarmDarkcoat = AutoToggle.Value
+    _G.AutoFarmDarkcoat = AutoToggle.Value
     SaveConfig()
 end)
+AutoToggle:SetValue(Config.AutoFarmDarkcoat)
 
-local ServerToggle = Tabs.Main:AddToggle("HopLow", {
-    Title = "Hop Low Server",
-    Default = false
-})
-ServerToggle:OnChanged(function(state)
-    _G.HopLow = state
-    if state then
+-- Status
+local Status = Tabs.Main:AddParagraph({Title="Status", Content="Idle"})
+task.spawn(function()
+    while task.wait(0.3) do
+        Status:SetContent(_G.DarkcoatStatus)
+    end
+end)
+
+-- Server Hop Button
+Tabs.Main:AddButton({Title="Hop Server", Description="Teleport to new server", Callback=function()
+    _G.ServerStatus = "Hopping..."
+    TeleportService:Teleport(game.PlaceId)
+end})
+
+-- Toggle Hop Low
+local HopLowToggle = Tabs.Main:AddToggle("HopLow", {Title="Hop Low Server", Default=false})
+HopLowToggle:OnChanged(function()
+    _G.HopLow = HopLowToggle.Value
+    if _G.HopLow then
         task.spawn(function()
             while _G.HopLow do
                 HopLowServer()
@@ -220,23 +224,13 @@ ServerToggle:OnChanged(function(state)
     end
 end)
 
-Tabs.Main:AddParagraph({
-    Title = "Status",
-    Content = "Darkcoat: Idle\nServer: Idle"
-})
-
--- UPDATE STATUS
-task.spawn(function()
-    while task.wait(0.5) do
-        Tabs.Main:SetParagraphContent(1,"Darkcoat: ".._G.DarkcoatStatus.."\nServer: ".._G.ServerStatus)
-    end
-end)
-
--- SaveManager & InterfaceManager
+-- Save Manager
 SaveManager:SetLibrary(Fluent)
 InterfaceManager:SetLibrary(Fluent)
 SaveManager:SetFolder("PoomEdit")
 InterfaceManager:SetFolder("PoomEdit")
+InterfaceManager:BuildInterfaceSection(Tabs.Settings)
+SaveManager:BuildConfigSection(Tabs.Settings)
 SaveManager:LoadAutoloadConfig()
 
-Fluent:Notify({Title="PoomEdit", Content="Script Loaded", Duration=5})
+Fluent:Notify({Title="Poom Edit", Content="Script Loaded", Duration=5})
