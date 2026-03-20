@@ -15,7 +15,10 @@ local player = Players.LocalPlayer
 -- SAVE SYSTEM
 -------------------------------------------------
 local FileName = "PoomDarkcoat.json"
-local Config = { AutoFarmDarkcoat = false }
+
+local Config = {
+	AutoFarmDarkcoat = false
+}
 
 if isfile and isfile(FileName) then
 	local data = HttpService:JSONDecode(readfile(FileName))
@@ -41,21 +44,30 @@ _G.HopLow = false
 function HasFOD()
 	local char = player.Character
 	if not char then return false end
+	
 	for _,v in pairs(player.Backpack:GetChildren()) do
 		if v.Name == "Fist of Darkness" then return true end
 	end
+	
 	for _,v in pairs(char:GetChildren()) do
 		if v.Name == "Fist of Darkness" then return true end
 	end
+	
 	return false
 end
 
 function TweenTo(pos)
 	local char = player.Character
 	if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+	
 	local hrp = char.HumanoidRootPart
 	local dist = (hrp.Position - pos).Magnitude
-	local tween = TweenService:Create(hrp, TweenInfo.new(dist/250, Enum.EasingStyle.Linear), {CFrame=CFrame.new(pos)})
+	
+	local tween = TweenService:Create(
+		hrp,
+		TweenInfo.new(dist/250, Enum.EasingStyle.Linear),
+		{CFrame = CFrame.new(pos)}
+	)
 	tween:Play()
 	tween.Completed:Wait()
 end
@@ -63,20 +75,22 @@ end
 function GetNearestChest()
 	local char = player.Character
 	if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+	
 	local hrp = char.HumanoidRootPart
 	local nearest, dist = nil, math.huge
+	
 	for _,v in pairs(workspace:GetDescendants()) do
-		if v:IsA("TouchTransmitter") then
+		if v:IsA("TouchTransmitter") and v.Parent:IsA("BasePart") then
 			local chest = v.Parent
-			if chest and chest:IsA("BasePart") then
-				local d = (chest.Position - hrp.Position).Magnitude
-				if d < dist then
-					dist = d
-					nearest = chest
-				end
+			local d = (chest.Position - hrp.Position).Magnitude
+			-- ข้ามประตู / Dojo / Flamingo
+			if d < dist and not chest:FindFirstChild("Door") then
+				dist = d
+				nearest = chest
 			end
 		end
 	end
+	
 	return nearest
 end
 
@@ -96,6 +110,7 @@ function SummonBoss()
 			_G.DarkcoatStatus = "Summoning Boss"
 			TweenTo(v.Position + Vector3.new(0,5,0))
 			task.wait(1)
+			
 			local tool = player.Backpack:FindFirstChild("Fist of Darkness")
 			if tool then
 				player.Character.Humanoid:EquipTool(tool)
@@ -118,13 +133,18 @@ function HopLowServer()
 	repeat
 		local url = "https://games.roblox.com/v1/games/"..game.PlaceId.."/servers/Public?limit=100&sortOrder=Asc"
 		if cursor ~= "" then url = url.."&cursor="..cursor end
+
 		local res = HttpService:JSONDecode(game:HttpGet(url))
+
 		for _,v in pairs(res.data) do
-			if v.playing < v.maxPlayers and v.playing < lowest then
-				lowest = v.playing
-				bestServer = v.id
+			if v.playing < v.maxPlayers then
+				if v.playing < lowest then
+					lowest = v.playing
+					bestServer = v.id
+				end
 			end
 		end
+
 		cursor = res.nextPageCursor or ""
 		task.wait(0.1)
 	until cursor == ""
@@ -174,268 +194,79 @@ task.spawn(function()
 				end
 			end
 		else
-			_G.DarkcoatStatus = "N/A"
+			_G.DarkcoatStatus = "Idle"
 		end
 	end
 end)
 
 -------------------------------------------------
--- GUI SETUP
+-- FLUENT UI
 -------------------------------------------------
-local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
-ScreenGui.ResetOnSpawn = false
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+local SaveManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/SaveManager.lua"))()
+local InterfaceManager = loadstring(game:HttpGet("https://raw.githubusercontent.com/dawid-scripts/Fluent/master/Addons/InterfaceManager.lua"))()
 
-local Main = Instance.new("Frame", ScreenGui)
-Main.Size = UDim2.new(0,0,0,0)
-Main.Position = UDim2.new(0.5,-175,0.5,-125)
-Main.BackgroundColor3 = Color3.fromRGB(18,18,18)
-Instance.new("UICorner", Main)
-Main:TweenSize(UDim2.new(0,350,0,320),"Out","Back",0.4,true)
+local Window = Fluent:CreateWindow({
+    Title = "Darkcoat Farm",
+    SubTitle = "by Poom",
+    TabWidth = 160,
+    Size = UDim2.fromOffset(580, 460),
+    Acrylic = true,
+    Theme = "Dark",
+    MinimizeKey = Enum.KeyCode.LeftControl
+})
 
-local Top = Instance.new("Frame", Main)
-Top.Size = UDim2.new(1,0,0,35)
-Top.BackgroundColor3 = Color3.fromRGB(25,25,25)
+local Tabs = {
+	Main = Window:AddTab({ Title = "Main" }),
+	Settings = Window:AddTab({ Title = "Settings" })
+}
 
-local Title = Instance.new("TextLabel", Top)
-Title.Size = UDim2.new(1,0,1,0)
-Title.BackgroundTransparency = 1
-Title.TextColor3 = Color3.new(1,1,1)
-Title.Font = Enum.Font.GothamBold
-Title.TextSize = 14
+local Options = Fluent.Options
 
--------------------------------------------------
--- FPS / PING
--------------------------------------------------
-local fps, currentFPS, last = 0,0,tick()
-RunService.RenderStepped:Connect(function()
-	fps+=1
-	if tick()-last>=1 then
-		currentFPS=fps
-		fps=0
-		last=tick()
-	end
-end)
+-- Status Labels
+local StatusLabel = Tabs.Main:AddParagraph({Title = "Darkcoat Status", Content = _G.DarkcoatStatus})
+local ServerLabel = Tabs.Main:AddParagraph({Title = "Server Status", Content = _G.ServerStatus})
 
 task.spawn(function()
-	while task.wait(1) do
-		local timeNow=os.date("%H:%M:%S")
-		local ping=math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())
-		Title.Text="Poom Edit | "..timeNow.." | "..ping.." ms | "..currentFPS.." FPS"
+	while true do
+		StatusLabel:SetContent(_G.DarkcoatStatus)
+		ServerLabel:SetContent(_G.ServerStatus)
+		if Fluent.Unloaded then break end
+		task.wait(0.3)
 	end
 end)
 
--------------------------------------------------
--- DARKCOAT SECTION + TOGGLE
--------------------------------------------------
-local Section = Instance.new("Frame", Main)
-Section.Size = UDim2.new(1,-10,0,120)
-Section.Position = UDim2.new(0,5,0,45)
-Section.BackgroundColor3 = Color3.fromRGB(28,28,28)
+-- Toggle Auto Darkcoat
+local AutoDarkcoatToggle = Tabs.Main:AddToggle("AutoDarkcoat", {Title="Auto Darkcoat", Default = Config.AutoFarmDarkcoat})
+AutoDarkcoatToggle:OnChanged(function(state)
+	_G.AutoFarmDarkcoat = state
+	Config.AutoFarmDarkcoat = state
+	SaveConfig()
+end)
+AutoDarkcoatToggle:SetValue(Config.AutoFarmDarkcoat)
 
-local StatusLabel = Instance.new("TextLabel", Section)
-StatusLabel.Size = UDim2.new(1,-10,0,25)
-StatusLabel.Position = UDim2.new(0,5,0,70)
-StatusLabel.BackgroundTransparency = 1
-StatusLabel.TextColor3 = Color3.new(1,1,1)
-
-task.spawn(function()
-	while task.wait(0.2) do
-		StatusLabel.Text = "Status: ".._G.DarkcoatStatus
+-- Hop Low Server Toggle
+local HopLowToggle = Tabs.Main:AddToggle("HopLow", {Title="Hop Low Server", Default=false})
+HopLowToggle:OnChanged(function(state)
+	_G.HopLow = state
+	if state then
+		task.spawn(function()
+			while _G.HopLow do
+				HopLowServer()
+				task.wait(10)
+			end
+		end)
 	end
 end)
 
--- Toggle (Auto Darkcoat)
-local function CreateToggle(parent, text, key)
-	local Frame = Instance.new("Frame", parent)
-	Frame.Size = UDim2.new(1,-10,0,35)
-	Frame.Position = UDim2.new(0,5,0,35)
-	Frame.BackgroundTransparency = 1
+-- Fluent SaveManager / InterfaceManager
+SaveManager:SetLibrary(Fluent)
+InterfaceManager:SetLibrary(Fluent)
+SaveManager:IgnoreThemeSettings()
+SaveManager:SetFolder("DarkcoatFarm")
+InterfaceManager:SetFolder("DarkcoatFarm")
+InterfaceManager:BuildInterfaceSection(Tabs.Settings)
+SaveManager:BuildConfigSection(Tabs.Settings)
+SaveManager:LoadAutoloadConfig()
 
-	local Label = Instance.new("TextLabel", Frame)
-	Label.Size = UDim2.new(0.6,0,1,0)
-	Label.BackgroundTransparency = 1
-	Label.Text = text
-	Label.TextColor3 = Color3.new(1,1,1)
-	Label.TextXAlignment = Enum.TextXAlignment.Left
-
-	local Btn = Instance.new("TextButton", Frame)
-	Btn.Size = UDim2.new(0,45,0,22)
-	Btn.Position = UDim2.new(1,-50,0.5,-11)
-	Btn.BackgroundColor3 = Color3.fromRGB(50,50,50)
-	Btn.AutoButtonColor = false
-
-	local Circle = Instance.new("Frame", Btn)
-	Circle.Size = UDim2.new(0,18,0,18)
-	Circle.Position = UDim2.new(0,2,0.5,-9)
-	Circle.BackgroundColor3 = Color3.new(1,1,1)
-	Circle.AnchorPoint = Vector2.new(0,0.5)
-
-	local state = Config[key]
-
-	local function Update()
-		if state then
-			Btn.BackgroundColor3 = Color3.fromRGB(0,170,255)
-			Circle:TweenPosition(UDim2.new(1,-20,0.5,-9),"Out","Sine",0.2,true)
-		else
-			Btn.BackgroundColor3 = Color3.fromRGB(50,50,50)
-			Circle:TweenPosition(UDim2.new(0,2,0.5,-9),"Out","Sine",0.2,true)
-		end
-		_G[key] = state
-	end
-
-	Update()
-
-	Btn.MouseButton1Click:Connect(function()
-		state = not state
-		Config[key] = state
-		SaveConfig()
-		Update()
-	end)
-end
-
-CreateToggle(Section,"Auto Darkcoat","AutoFarmDarkcoat")
-
--------------------------------------------------
--- SERVER SECTION
--------------------------------------------------
-local ServerSection = Instance.new("Frame", Main)
-ServerSection.Size = UDim2.new(1,-10,0,120)
-ServerSection.Position = UDim2.new(0,5,0,180)
-ServerSection.BackgroundColor3 = Color3.fromRGB(28,28,28)
-
-local ServerLabel = Instance.new("TextLabel", ServerSection)
-ServerLabel.Size = UDim2.new(1,-10,0,25)
-ServerLabel.Position = UDim2.new(0,5,0,80)
-ServerLabel.BackgroundTransparency = 1
-ServerLabel.TextColor3 = Color3.new(1,1,1)
-
-task.spawn(function()
-	while task.wait(0.2) do
-		ServerLabel.Text = "Status: ".._G.ServerStatus
-	end
-end)
-
-local HopBtn = Instance.new("TextButton", ServerSection)
-HopBtn.Size = UDim2.new(1,-10,0,35)
-HopBtn.Position = UDim2.new(0,5,0,40)
-HopBtn.Text = "Hop Server"
-HopBtn.BackgroundColor3 = Color3.fromRGB(0,170,255)
-
-HopBtn.MouseButton1Click:Connect(function()
-	_G.ServerStatus = "Hopping..."
-	TeleportService:Teleport(game.PlaceId)
-end)
-
--- Toggle Hop Low
-local function CreateServerToggle(parent)
-	local Frame = Instance.new("Frame", parent)
-	Frame.Size = UDim2.new(1,-10,0,35)
-	Frame.Position = UDim2.new(0,5,0,0)
-
-	local Toggle = Instance.new("TextButton", Frame)
-	Toggle.Size = UDim2.new(0,45,0,22)
-	Toggle.Position = UDim2.new(1,-50,0.5,-11)
-	Toggle.BackgroundColor3 = Color3.fromRGB(50,50,50)
-	Toggle.AutoButtonColor = false
-
-	local Circle = Instance.new("Frame", Toggle)
-	Circle.Size = UDim2.new(0,18,0,18)
-	Circle.Position = UDim2.new(0,2,0.5,-9)
-	Circle.BackgroundColor3 = Color3.new(1,1,1)
-	Circle.AnchorPoint = Vector2.new(0,0.5)
-
-	local state = false
-	Toggle.MouseButton1Click:Connect(function()
-		state = not state
-		if state then
-			_G.HopLow = true
-			Toggle.BackgroundColor3 = Color3.fromRGB(0,170,255)
-			Circle:TweenPosition(UDim2.new(1,-20,0.5,-9),"Out","Sine",0.2,true)
-			task.spawn(function()
-				while _G.HopLow do
-					HopLowServer()
-					task.wait(10)
-				end
-			end)
-		else
-			_G.HopLow = false
-			_G.ServerStatus = "Stopped"
-			Toggle.BackgroundColor3 = Color3.fromRGB(50,50,50)
-			Circle:TweenPosition(UDim2.new(0,2,0.5,-9),"Out","Sine",0.2,true)
-		end
-	end)
-end
-
-CreateServerToggle(ServerSection)
-
--------------------------------------------------
--- MINIMIZE + FLOAT BUTTON
--------------------------------------------------
-local MinBtn = Instance.new("TextButton", Top)
-MinBtn.Size = UDim2.new(0,30,1,0)
-MinBtn.Position = UDim2.new(1,-30,0,0)
-MinBtn.Text = "-"
-MinBtn.BackgroundTransparency = 1
-MinBtn.TextColor3 = Color3.new(1,1,1)
-MinBtn.Font = Enum.Font.GothamBold
-
-local OpenBtn = Instance.new("TextButton", ScreenGui)
-OpenBtn.Size = UDim2.new(0,120,0,35)
-OpenBtn.Position = UDim2.new(0,20,0.5,0)
-OpenBtn.Text = "OPEN UI"
-OpenBtn.Visible = false
-OpenBtn.BackgroundColor3 = Color3.fromRGB(0,170,255)
-OpenBtn.TextColor3 = Color3.new(1,1,1)
-OpenBtn.Font = Enum.Font.GothamBold
-Instance.new("UICorner", OpenBtn)
-
-local minimized = false
-MinBtn.MouseButton1Click:Connect(function()
-	minimized = not minimized
-	Main.Visible = not minimized
-	OpenBtn.Visible = minimized
-end)
-OpenBtn.MouseButton1Click:Connect(function()
-	Main.Visible = true
-	OpenBtn.Visible = false
-	minimized = false
-end)
-
--------------------------------------------------
--- DRAG FIX
--------------------------------------------------
-local draggingMain, dragStartMain, startPosMain
-Top.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 then
-		draggingMain = true
-		dragStartMain = input.Position
-		startPosMain = Main.Position
-	end
-end)
-UIS.InputChanged:Connect(function(input)
-	if draggingMain and input.UserInputType == Enum.UserInputType.MouseMovement then
-		local delta = input.Position - dragStartMain
-		Main.Position = UDim2.new(startPosMain.X.Scale, startPosMain.X.Offset+delta.X, startPosMain.Y.Scale, startPosMain.Y.Offset+delta.Y)
-	end
-end)
-UIS.InputEnded:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 then draggingMain=false end
-end)
-
-local draggingBtn, dragStartBtn, startPosBtn
-OpenBtn.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 then
-		draggingBtn = true
-		dragStartBtn = input.Position
-		startPosBtn = OpenBtn.Position
-	end
-end)
-UIS.InputChanged:Connect(function(input)
-	if draggingBtn and input.UserInputType == Enum.UserInputType.MouseMovement then
-		local delta = input.Position - dragStartBtn
-		OpenBtn.Position = UDim2.new(startPosBtn.X.Scale,startPosBtn.X.Offset+delta.X,startPosBtn.Y.Scale,startPosBtn.Y.Offset+delta.Y)
-	end
-end)
-UIS.InputEnded:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 then draggingBtn=false end
-end)
+Fluent:Notify({Title="Loaded", Content="Darkcoat Farm Script is ready!", Duration=6})
