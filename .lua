@@ -15,10 +15,7 @@ local player = Players.LocalPlayer
 -- SAVE SYSTEM
 -------------------------------------------------
 local FileName = "PoomDarkcoat.json"
-
-local Config = {
-	AutoFarmDarkcoat = true -- เปิดเองตาม Config
-}
+local Config = { AutoFarmDarkcoat = false }
 
 if isfile and isfile(FileName) then
 	local data = HttpService:JSONDecode(readfile(FileName))
@@ -44,30 +41,21 @@ _G.HopLow = false
 function HasFOD()
 	local char = player.Character
 	if not char then return false end
-	
 	for _,v in pairs(player.Backpack:GetChildren()) do
 		if v.Name == "Fist of Darkness" then return true end
 	end
-	
 	for _,v in pairs(char:GetChildren()) do
 		if v.Name == "Fist of Darkness" then return true end
 	end
-	
 	return false
 end
 
 function TweenTo(pos)
 	local char = player.Character
 	if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-	
 	local hrp = char.HumanoidRootPart
 	local dist = (hrp.Position - pos).Magnitude
-	
-	local tween = TweenService:Create(
-		hrp,
-		TweenInfo.new(dist/250, Enum.EasingStyle.Linear),
-		{CFrame = CFrame.new(pos)}
-	)
+	local tween = TweenService:Create(hrp, TweenInfo.new(dist/250, Enum.EasingStyle.Linear), {CFrame=CFrame.new(pos)})
 	tween:Play()
 	tween.Completed:Wait()
 end
@@ -75,10 +63,8 @@ end
 function GetNearestChest()
 	local char = player.Character
 	if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-	
 	local hrp = char.HumanoidRootPart
 	local nearest, dist = nil, math.huge
-	
 	for _,v in pairs(workspace:GetDescendants()) do
 		if v:IsA("TouchTransmitter") then
 			local chest = v.Parent
@@ -91,7 +77,6 @@ function GetNearestChest()
 			end
 		end
 	end
-	
 	return nearest
 end
 
@@ -111,7 +96,6 @@ function SummonBoss()
 			_G.DarkcoatStatus = "Summoning Boss"
 			TweenTo(v.Position + Vector3.new(0,5,0))
 			task.wait(1)
-			
 			local tool = player.Backpack:FindFirstChild("Fist of Darkness")
 			if tool then
 				player.Character.Humanoid:EquipTool(tool)
@@ -134,18 +118,13 @@ function HopLowServer()
 	repeat
 		local url = "https://games.roblox.com/v1/games/"..game.PlaceId.."/servers/Public?limit=100&sortOrder=Asc"
 		if cursor ~= "" then url = url.."&cursor="..cursor end
-
 		local res = HttpService:JSONDecode(game:HttpGet(url))
-
 		for _,v in pairs(res.data) do
-			if v.playing < v.maxPlayers then
-				if v.playing < lowest then
-					lowest = v.playing
-					bestServer = v.id
-				end
+			if v.playing < v.maxPlayers and v.playing < lowest then
+				lowest = v.playing
+				bestServer = v.id
 			end
 		end
-
 		cursor = res.nextPageCursor or ""
 		task.wait(0.1)
 	until cursor == ""
@@ -246,7 +225,7 @@ task.spawn(function()
 end)
 
 -------------------------------------------------
--- DARKCOAT SECTION
+-- DARKCOAT SECTION + TOGGLE
 -------------------------------------------------
 local Section = Instance.new("Frame", Main)
 Section.Size = UDim2.new(1,-10,0,120)
@@ -265,38 +244,40 @@ task.spawn(function()
 	end
 end)
 
--------------------------------------------------
--- TOGGLE AUTO DARKCOAT
--------------------------------------------------
+-- Toggle (Auto Darkcoat)
 local function CreateToggle(parent, text, key)
 	local Frame = Instance.new("Frame", parent)
 	Frame.Size = UDim2.new(1,-10,0,35)
 	Frame.Position = UDim2.new(0,5,0,35)
+	Frame.BackgroundTransparency = 1
 
 	local Label = Instance.new("TextLabel", Frame)
 	Label.Size = UDim2.new(0.6,0,1,0)
 	Label.BackgroundTransparency = 1
 	Label.Text = text
 	Label.TextColor3 = Color3.new(1,1,1)
+	Label.TextXAlignment = Enum.TextXAlignment.Left
 
-	local Toggle = Instance.new("Frame", Frame)
-	Toggle.Size = UDim2.new(0,45,0,22)
-	Toggle.Position = UDim2.new(1,-50,0.5,-11)
-	Toggle.BackgroundColor3 = Color3.fromRGB(50,50,50)
+	local Btn = Instance.new("TextButton", Frame)
+	Btn.Size = UDim2.new(0,45,0,22)
+	Btn.Position = UDim2.new(1,-50,0.5,-11)
+	Btn.BackgroundColor3 = Color3.fromRGB(50,50,50)
+	Btn.AutoButtonColor = false
 
-	local Circle = Instance.new("Frame", Toggle)
+	local Circle = Instance.new("Frame", Btn)
 	Circle.Size = UDim2.new(0,18,0,18)
 	Circle.Position = UDim2.new(0,2,0.5,-9)
 	Circle.BackgroundColor3 = Color3.new(1,1,1)
+	Circle.AnchorPoint = Vector2.new(0,0.5)
 
 	local state = Config[key]
 
 	local function Update()
 		if state then
-			Toggle.BackgroundColor3 = Color3.fromRGB(0,170,255)
+			Btn.BackgroundColor3 = Color3.fromRGB(0,170,255)
 			Circle:TweenPosition(UDim2.new(1,-20,0.5,-9),"Out","Sine",0.2,true)
 		else
-			Toggle.BackgroundColor3 = Color3.fromRGB(50,50,50)
+			Btn.BackgroundColor3 = Color3.fromRGB(50,50,50)
 			Circle:TweenPosition(UDim2.new(0,2,0.5,-9),"Out","Sine",0.2,true)
 		end
 		_G[key] = state
@@ -304,13 +285,11 @@ local function CreateToggle(parent, text, key)
 
 	Update()
 
-	Toggle.InputBegan:Connect(function(input)
-		if input.UserInputType.Name:find("Mouse") then
-			state = not state
-			Config[key] = state
-			SaveConfig()
-			Update()
-		end
+	Btn.MouseButton1Click:Connect(function()
+		state = not state
+		Config[key] = state
+		SaveConfig()
+		Update()
 	end)
 end
 
@@ -336,7 +315,6 @@ task.spawn(function()
 	end
 end)
 
--- Hop Button
 local HopBtn = Instance.new("TextButton", ServerSection)
 HopBtn.Size = UDim2.new(1,-10,0,35)
 HopBtn.Position = UDim2.new(0,5,0,40)
@@ -354,39 +332,36 @@ local function CreateServerToggle(parent)
 	Frame.Size = UDim2.new(1,-10,0,35)
 	Frame.Position = UDim2.new(0,5,0,0)
 
-	local Toggle = Instance.new("Frame", Frame)
+	local Toggle = Instance.new("TextButton", Frame)
 	Toggle.Size = UDim2.new(0,45,0,22)
 	Toggle.Position = UDim2.new(1,-50,0.5,-11)
 	Toggle.BackgroundColor3 = Color3.fromRGB(50,50,50)
+	Toggle.AutoButtonColor = false
 
 	local Circle = Instance.new("Frame", Toggle)
 	Circle.Size = UDim2.new(0,18,0,18)
 	Circle.Position = UDim2.new(0,2,0.5,-9)
 	Circle.BackgroundColor3 = Color3.new(1,1,1)
+	Circle.AnchorPoint = Vector2.new(0,0.5)
 
 	local state = false
-
-	Toggle.InputBegan:Connect(function(input)
-		if input.UserInputType.Name:find("Mouse") then
-			state = not state
-
-			if state then
-				_G.HopLow = true
-				Toggle.BackgroundColor3 = Color3.fromRGB(0,170,255)
-				Circle:TweenPosition(UDim2.new(1,-20,0.5,-9),"Out","Sine",0.2,true)
-
-				task.spawn(function()
-					while _G.HopLow do
-						HopLowServer()
-						task.wait(10)
-					end
-				end)
-			else
-				_G.HopLow = false
-				_G.ServerStatus = "Stopped"
-				Toggle.BackgroundColor3 = Color3.fromRGB(50,50,50)
-				Circle:TweenPosition(UDim2.new(0,2,0.5,-9),"Out","Sine",0.2,true)
-			end
+	Toggle.MouseButton1Click:Connect(function()
+		state = not state
+		if state then
+			_G.HopLow = true
+			Toggle.BackgroundColor3 = Color3.fromRGB(0,170,255)
+			Circle:TweenPosition(UDim2.new(1,-20,0.5,-9),"Out","Sine",0.2,true)
+			task.spawn(function()
+				while _G.HopLow do
+					HopLowServer()
+					task.wait(10)
+				end
+			end)
+		else
+			_G.HopLow = false
+			_G.ServerStatus = "Stopped"
+			Toggle.BackgroundColor3 = Color3.fromRGB(50,50,50)
+			Circle:TweenPosition(UDim2.new(0,2,0.5,-9),"Out","Sine",0.2,true)
 		end
 	end)
 end
@@ -415,13 +390,11 @@ OpenBtn.Font = Enum.Font.GothamBold
 Instance.new("UICorner", OpenBtn)
 
 local minimized = false
-
 MinBtn.MouseButton1Click:Connect(function()
 	minimized = not minimized
 	Main.Visible = not minimized
 	OpenBtn.Visible = minimized
 end)
-
 OpenBtn.MouseButton1Click:Connect(function()
 	Main.Visible = true
 	OpenBtn.Visible = false
@@ -429,7 +402,7 @@ OpenBtn.MouseButton1Click:Connect(function()
 end)
 
 -------------------------------------------------
--- DRAG FIX (MAIN + BUTTON)
+-- DRAG FIX
 -------------------------------------------------
 local draggingMain, dragStartMain, startPosMain
 Top.InputBegan:Connect(function(input)
@@ -442,16 +415,11 @@ end)
 UIS.InputChanged:Connect(function(input)
 	if draggingMain and input.UserInputType == Enum.UserInputType.MouseMovement then
 		local delta = input.Position - dragStartMain
-		Main.Position = UDim2.new(
-			startPosMain.X.Scale,
-			startPosMain.X.Offset + delta.X,
-			startPosMain.Y.Scale,
-			startPosMain.Y.Offset + delta.Y
-		)
+		Main.Position = UDim2.new(startPosMain.X.Scale, startPosMain.X.Offset+delta.X, startPosMain.Y.Scale, startPosMain.Y.Offset+delta.Y)
 	end
 end)
 UIS.InputEnded:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 then draggingMain = false end
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then draggingMain=false end
 end)
 
 local draggingBtn, dragStartBtn, startPosBtn
@@ -465,14 +433,9 @@ end)
 UIS.InputChanged:Connect(function(input)
 	if draggingBtn and input.UserInputType == Enum.UserInputType.MouseMovement then
 		local delta = input.Position - dragStartBtn
-		OpenBtn.Position = UDim2.new(
-			startPosBtn.X.Scale,
-			startPosBtn.X.Offset + delta.X,
-			startPosBtn.Y.Scale,
-			startPosBtn.Y.Offset + delta.Y
-		)
+		OpenBtn.Position = UDim2.new(startPosBtn.X.Scale,startPosBtn.X.Offset+delta.X,startPosBtn.Y.Scale,startPosBtn.Y.Offset+delta.Y)
 	end
 end)
 UIS.InputEnded:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 then draggingBtn = false end
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then draggingBtn=false end
 end)
