@@ -8,12 +8,11 @@ ScreenGui.Name = "MyAwesomeUI"
 
 -- MAIN FRAME
 local Main = Instance.new("Frame", ScreenGui)
-Main.Size = UDim2.new(0, 600, 0, 350)
-Main.Position = UDim2.new(0.5, -300, 0.5, -175)
+Main.AnchorPoint = Vector2.new(0.5, 0.5)
+Main.Size = UDim2.new(0.9, 0, 0.7, 0)
+Main.Position = UDim2.new(0.5, 0, 0.5, 0)
 Main.BackgroundColor3 = Color3.fromRGB(10,10,10)
 Main.BorderSizePixel = 0
-
--- CORNER
 Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 12)
 
 -- HEADER
@@ -26,15 +25,15 @@ Instance.new("UICorner", Header).CornerRadius = UDim.new(0, 12)
 -- TITLE
 local Title = Instance.new("TextLabel", Header)
 Title.Text = "My Awesome GUI"
-Title.Size = UDim2.new(0,200,1,0)
+Title.Size = UDim2.new(0.6,0,1,0)
 Title.Position = UDim2.new(0,10,0,0)
 Title.BackgroundTransparency = 1
 Title.TextColor3 = Color3.fromRGB(0,200,255)
 Title.Font = Enum.Font.GothamBold
-Title.TextSize = 18
+Title.TextSize = 16
 Title.TextXAlignment = Enum.TextXAlignment.Left
 
--- CLOSE BUTTON
+-- CLOSE
 local Close = Instance.new("TextButton", Header)
 Close.Size = UDim2.new(0,30,0,30)
 Close.Position = UDim2.new(1,-40,0.5,-15)
@@ -47,7 +46,7 @@ Close.MouseButton1Click:Connect(function()
     ScreenGui:Destroy()
 end)
 
--- MINIMIZE BUTTON
+-- MINIMIZE
 local Min = Instance.new("TextButton", Header)
 Min.Size = UDim2.new(0,30,0,30)
 Min.Position = UDim2.new(1,-80,0.5,-15)
@@ -59,38 +58,36 @@ Instance.new("UICorner", Min)
 local minimized = false
 Min.MouseButton1Click:Connect(function()
     minimized = not minimized
-    Main.Size = minimized and UDim2.new(0,600,0,40) or UDim2.new(0,600,0,350)
+    Main.Size = minimized and UDim2.new(0.9,0,0.1,0) or UDim2.new(0.9,0,0.7,0)
 end)
 
 -- SIDEBAR
 local Sidebar = Instance.new("Frame", Main)
-Sidebar.Size = UDim2.new(0,150,1,-40)
+Sidebar.Size = UDim2.new(0.25, 0, 1, -40)
 Sidebar.Position = UDim2.new(0,0,0,40)
 Sidebar.BackgroundColor3 = Color3.fromRGB(15,15,15)
 Sidebar.BorderSizePixel = 0
 
--- BUTTON FUNCTION
-local function CreateTab(name, y)
+local function CreateTab(name, y, active)
     local btn = Instance.new("TextButton", Sidebar)
     btn.Size = UDim2.new(1,-20,0,40)
     btn.Position = UDim2.new(0,10,0,y)
     btn.Text = name
-    btn.BackgroundColor3 = name == "Main" and Color3.fromRGB(0,170,200) or Color3.fromRGB(25,25,25)
+    btn.BackgroundColor3 = active and Color3.fromRGB(0,170,200) or Color3.fromRGB(25,25,25)
     btn.TextColor3 = Color3.new(1,1,1)
     btn.Font = Enum.Font.Gotham
     btn.TextSize = 14
     Instance.new("UICorner", btn)
-    return btn
 end
 
-local MainTab = CreateTab("Main",10)
-local SettingsTab = CreateTab("Settings",60)
-local CreditsTab = CreateTab("Credits",110)
+CreateTab("Main",10,true)
+CreateTab("Settings",60,false)
+CreateTab("Credits",110,false)
 
 -- CONTENT
 local Content = Instance.new("Frame", Main)
-Content.Size = UDim2.new(1,-160,1,-50)
-Content.Position = UDim2.new(0,160,0,45)
+Content.Size = UDim2.new(0.75, -10, 1, -50)
+Content.Position = UDim2.new(0.25, 10, 0, 45)
 Content.BackgroundTransparency = 1
 
 -- PRINT BUTTON
@@ -128,22 +125,20 @@ ToggleBtn.BackgroundColor3 = Color3.fromRGB(80,80,80)
 ToggleBtn.Text = ""
 Instance.new("UICorner", ToggleBtn)
 
-local ToggleCircle = Instance.new("Frame", ToggleBtn)
-ToggleCircle.Size = UDim2.new(0,20,0,20)
-ToggleCircle.Position = UDim2.new(0,2,0.5,-10)
-ToggleCircle.BackgroundColor3 = Color3.new(1,1,1)
-Instance.new("UICorner", ToggleCircle)
+local Circle = Instance.new("Frame", ToggleBtn)
+Circle.Size = UDim2.new(0,20,0,20)
+Circle.Position = UDim2.new(0,2,0.5,-10)
+Circle.BackgroundColor3 = Color3.new(1,1,1)
+Instance.new("UICorner", Circle)
 
-local toggled = false
-
+local on = false
 ToggleBtn.MouseButton1Click:Connect(function()
-    toggled = not toggled
-    
-    if toggled then
+    on = not on
+    if on then
         ToggleBtn.BackgroundColor3 = Color3.fromRGB(0,170,200)
-        ToggleCircle.Position = UDim2.new(1,-22,0.5,-10)
+        Circle.Position = UDim2.new(1,-22,0.5,-10)
     else
         ToggleBtn.BackgroundColor3 = Color3.fromRGB(80,80,80)
-        ToggleCircle.Position = UDim2.new(0,2,0.5,-10)
+        Circle.Position = UDim2.new(0,2,0.5,-10)
     end
 end)
