@@ -1,33 +1,107 @@
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
+--// SERVICES
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
 
-local Window = Library.CreateLib("Poom Edit", "Synapse")
+--// DATA
+local FightingStyles = {
+    "Combat","Dark Step","Electric","Water Kung Fu","Dragon Breath",
+    "Superhuman","Death Step","Sharkman Karate","Electric Claw",
+    "Dragon Talon","Godhuman","Sanguine Art"
+}
 
-local Tab1 = Window:NewTab("TabName ")
+local Swords = {
+    "Katana","Cutlass","Dual Katana","Triple Katana",
+    "Shisui","Wando","Saddi","Yama","Tushita",
+    "Cursed Dual Katana","Saber","Pole",
+    "Midnight Blade","Rengoku","Dark Blade"
+}
 
-local Section9 = Tab1:NewSection("Dark Coat")
+--// GUI
+local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
+ScreenGui.Name = "ItemCheckerUI"
 
-Section9:NewLabel("Status : N/A")
+local Main = Instance.new("Frame", ScreenGui)
+Main.Size = UDim2.new(0, 350, 0, 400)
+Main.Position = UDim2.new(0.5, -175, 0.5, -200)
+Main.BackgroundColor3 = Color3.fromRGB(25,25,25)
 
-Section9:NewToggle("Farm Darkcoat", "ToggleInfo", function(state)
-    if state then
-        print("Toggle On")
+local UIListLayout = Instance.new("UIListLayout", Main)
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+
+-- Title
+local Title = Instance.new("TextLabel", Main)
+Title.Size = UDim2.new(1,0,0,40)
+Title.Text = "Item Checker"
+Title.TextColor3 = Color3.new(1,1,1)
+Title.BackgroundTransparency = 1
+Title.TextScaled = true
+
+-- Scroll
+local Scroll = Instance.new("ScrollingFrame", Main)
+Scroll.Size = UDim2.new(1,0,1,-80)
+Scroll.CanvasSize = UDim2.new(0,0,0,0)
+Scroll.BackgroundTransparency = 1
+
+local List = Instance.new("UIListLayout", Scroll)
+
+-- Refresh Button
+local Refresh = Instance.new("TextButton", Main)
+Refresh.Size = UDim2.new(1,0,0,40)
+Refresh.Text = "🔄 Refresh"
+Refresh.BackgroundColor3 = Color3.fromRGB(40,40,40)
+Refresh.TextColor3 = Color3.new(1,1,1)
+
+--// FUNCTION เช็คของ
+local function HasItem(name)
+    local backpack = player:WaitForChild("Backpack")
+    local character = player.Character or player.CharacterAdded:Wait()
+
+    return backpack:FindFirstChild(name) or character:FindFirstChild(name)
+end
+
+--// CREATE ROW
+local function CreateRow(text, has)
+    local Label = Instance.new("TextLabel")
+    Label.Size = UDim2.new(1,0,0,25)
+    Label.BackgroundTransparency = 1
+    Label.TextScaled = true
+
+    if has then
+        Label.Text = "✔ " .. text
+        Label.TextColor3 = Color3.fromRGB(0,255,0)
     else
-        print("Toggle Off")
+        Label.Text = "❌ " .. text
+        Label.TextColor3 = Color3.fromRGB(255,0,0)
     end
-end)
 
-local Section67 = Tab1:NewSection("Server")
+    Label.Parent = Scroll
+end
 
-Section67:NewButton("Hop Server", "ButtonInfo", function()
-    print("Clicked")
-end)
+--// LOAD LIST
+local function LoadItems()
+    Scroll:ClearAllChildren()
+    List.Parent = Scroll
 
-Section67:NewToggle("Hop Low Player", "ToggleInfo", function(state)
-    if state then
-        print("Toggle On")
-    else
-        print("Toggle Off")
+    -- หมัด
+    CreateRow("=== Fighting Styles ===", true)
+    for _,v in pairs(FightingStyles) do
+        CreateRow(v, HasItem(v))
     end
+
+    -- ดาบ
+    CreateRow("=== Swords ===", true)
+    for _,v in pairs(Swords) do
+        CreateRow(v, HasItem(v))
+    end
+
+    task.wait()
+    Scroll.CanvasSize = UDim2.new(0,0,0,List.AbsoluteContentSize.Y)
+end
+
+-- ปุ่มกด
+Refresh.MouseButton1Click:Connect(function()
+    LoadItems()
 end)
 
-Section67:NewLabel("Status : N/A")
+-- โหลดครั้งแรก
+LoadItems()
