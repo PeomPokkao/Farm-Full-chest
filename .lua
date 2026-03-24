@@ -17,7 +17,11 @@ ScreenGui.Name = "KaitunMiniUI"
 
 local Main = Instance.new("Frame", ScreenGui)
 Main.Size = UDim2.new(0, 260, 0, 120)
-Main.Position = UDim2.new(0, 20, 0, 100)
+
+-- 🔥 FIX อยู่กลางจอ
+Main.AnchorPoint = Vector2.new(0.5, 0.5)
+Main.Position = UDim2.new(0.5, 0, 0.5, 0)
+
 Main.BackgroundColor3 = Color3.fromRGB(25,25,25)
 Main.BorderSizePixel = 0
 
@@ -31,12 +35,16 @@ Stroke.Color = Color3.fromRGB(60,60,60)
 Stroke.Thickness = 1
 
 --------------------------------------------------
--- DRAG
+-- DRAG (FIX ลากได้จริง)
 --------------------------------------------------
-local dragging, dragInput, dragStart, startPos
+local dragging = false
+local dragStart = nil
+local startPos = nil
 
 Main.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+    if input.UserInputType == Enum.UserInputType.MouseButton1 
+    or input.UserInputType == Enum.UserInputType.Touch then
+
         dragging = true
         dragStart = input.Position
         startPos = Main.Position
@@ -49,15 +57,12 @@ Main.InputBegan:Connect(function(input)
     end
 end)
 
-Main.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement then
-        dragInput = input
-    end
-end)
-
 UIS.InputChanged:Connect(function(input)
-    if input == dragInput and dragging then
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement 
+    or input.UserInputType == Enum.UserInputType.Touch) then
+
         local delta = input.Position - dragStart
+
         Main.Position = UDim2.new(
             startPos.X.Scale,
             startPos.X.Offset + delta.X,
