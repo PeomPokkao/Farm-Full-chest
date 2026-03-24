@@ -1,144 +1,126 @@
---// SERVICES
-local Players = game:GetService("Players")
-local player = Players.LocalPlayer
+_G.AutoFarm = true
 
---// GUI
-local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
-ScreenGui.Name = "MyAwesomeUI"
+local player = game.Players.LocalPlayer
+local RS = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+local VirtualUser = game:GetService("VirtualUser")
 
--- MAIN FRAME
-local Main = Instance.new("Frame", ScreenGui)
-Main.AnchorPoint = Vector2.new(0.5, 0.5)
-Main.Size = UDim2.new(0.9, 0, 0.7, 0)
-Main.Position = UDim2.new(0.5, 0, 0.5, 0)
-Main.BackgroundColor3 = Color3.fromRGB(10,10,10)
-Main.BorderSizePixel = 0
-Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 12)
-
--- HEADER
-local Header = Instance.new("Frame", Main)
-Header.Size = UDim2.new(1,0,0,40)
-Header.BackgroundColor3 = Color3.fromRGB(0,0,0)
-Header.BorderSizePixel = 0
-Instance.new("UICorner", Header).CornerRadius = UDim.new(0, 12)
-
--- TITLE
-local Title = Instance.new("TextLabel", Header)
-Title.Text = "My Awesome GUI"
-Title.Size = UDim2.new(0.6,0,1,0)
-Title.Position = UDim2.new(0,10,0,0)
-Title.BackgroundTransparency = 1
-Title.TextColor3 = Color3.fromRGB(0,200,255)
-Title.Font = Enum.Font.GothamBold
-Title.TextSize = 16
-Title.TextXAlignment = Enum.TextXAlignment.Left
-
--- CLOSE
-local Close = Instance.new("TextButton", Header)
-Close.Size = UDim2.new(0,30,0,30)
-Close.Position = UDim2.new(1,-40,0.5,-15)
-Close.Text = "X"
-Close.BackgroundColor3 = Color3.fromRGB(255,80,80)
-Close.TextColor3 = Color3.new(1,1,1)
-Instance.new("UICorner", Close)
-
-Close.MouseButton1Click:Connect(function()
-    ScreenGui:Destroy()
-end)
-
--- MINIMIZE
-local Min = Instance.new("TextButton", Header)
-Min.Size = UDim2.new(0,30,0,30)
-Min.Position = UDim2.new(1,-80,0.5,-15)
-Min.Text = "-"
-Min.BackgroundColor3 = Color3.fromRGB(255,200,80)
-Min.TextColor3 = Color3.new(1,1,1)
-Instance.new("UICorner", Min)
-
-local minimized = false
-Min.MouseButton1Click:Connect(function()
-    minimized = not minimized
-    Main.Size = minimized and UDim2.new(0.9,0,0.1,0) or UDim2.new(0.9,0,0.7,0)
-end)
-
--- SIDEBAR
-local Sidebar = Instance.new("Frame", Main)
-Sidebar.Size = UDim2.new(0.25, 0, 1, -40)
-Sidebar.Position = UDim2.new(0,0,0,40)
-Sidebar.BackgroundColor3 = Color3.fromRGB(15,15,15)
-Sidebar.BorderSizePixel = 0
-
-local function CreateTab(name, y, active)
-    local btn = Instance.new("TextButton", Sidebar)
-    btn.Size = UDim2.new(1,-20,0,40)
-    btn.Position = UDim2.new(0,10,0,y)
-    btn.Text = name
-    btn.BackgroundColor3 = active and Color3.fromRGB(0,170,200) or Color3.fromRGB(25,25,25)
-    btn.TextColor3 = Color3.new(1,1,1)
-    btn.Font = Enum.Font.Gotham
-    btn.TextSize = 14
-    Instance.new("UICorner", btn)
+--------------------------------------------------
+-- CHARACTER
+--------------------------------------------------
+local function GetChar()
+    return player.Character or player.CharacterAdded:Wait()
 end
 
-CreateTab("Main",10,true)
-CreateTab("Settings",60,false)
-CreateTab("Credits",110,false)
+local function HRP()
+    return GetChar():WaitForChild("HumanoidRootPart")
+end
 
--- CONTENT
-local Content = Instance.new("Frame", Main)
-Content.Size = UDim2.new(0.75, -10, 1, -50)
-Content.Position = UDim2.new(0.25, 10, 0, 45)
-Content.BackgroundTransparency = 1
+--------------------------------------------------
+-- 📊 QUEST TABLE (1-2800 ใช้ได้จริง)
+--------------------------------------------------
+local QuestTable = {
 
--- PRINT BUTTON
-local PrintBtn = Instance.new("TextButton", Content)
-PrintBtn.Size = UDim2.new(1,0,0,40)
-PrintBtn.Position = UDim2.new(0,0,0,0)
-PrintBtn.Text = "Print Message"
-PrintBtn.BackgroundColor3 = Color3.fromRGB(30,30,30)
-PrintBtn.TextColor3 = Color3.new(1,1,1)
-Instance.new("UICorner", PrintBtn)
+    -- SEA 1
+    {1,10,"Bandit","BanditQuest1",1,CFrame.new(1060,16,1547),CFrame.new(1150,17,1630)},
+    {11,30,"Monkey","JungleQuest",1,CFrame.new(-1600,36,153),CFrame.new(-1440,67,11)},
+    {31,60,"Gorilla","JungleQuest",2,CFrame.new(-1600,36,153),CFrame.new(-1100,40,-500)},
+    {61,100,"Pirate","BuggyQuest1",1,CFrame.new(-1140,4,3830),CFrame.new(-1200,5,4000)},
+    {101,150,"Brute","BuggyQuest1",2,CFrame.new(-1140,4,3830),CFrame.new(-1000,5,4300)},
+    {151,225,"Desert Bandit","DesertQuest",1,CFrame.new(894,5,4392),CFrame.new(1000,10,4500)},
+    {226,300,"Desert Officer","DesertQuest",2,CFrame.new(894,5,4392),CFrame.new(1600,10,4300)},
+    {301,375,"Snow Bandit","SnowQuest",1,CFrame.new(1389,87,-1298),CFrame.new(1200,120,-1400)},
+    {376,450,"Snowman","SnowQuest",2,CFrame.new(1389,87,-1298),CFrame.new(1200,150,-1600)},
+    {451,525,"Chief Petty Officer","MarineQuest2",1,CFrame.new(-5035,29,4324),CFrame.new(-4900,60,4100)},
+    {526,625,"Sky Bandit","SkyQuest",1,CFrame.new(-4842,717,-2623),CFrame.new(-4700,750,-2600)},
+    {626,700,"Dark Master","SkyQuest",2,CFrame.new(-4842,717,-2623),CFrame.new(-5200,800,-2300)},
 
-PrintBtn.MouseButton1Click:Connect(function()
-    print("Hello from UI!")
-end)
+    -- SEA 2
+    {700,775,"Raider","Area1Quest",1,CFrame.new(-429,72,1836),CFrame.new(-300,80,1700)},
+    {776,875,"Mercenary","Area1Quest",2,CFrame.new(-429,72,1836),CFrame.new(-100,80,1500)},
+    {876,950,"Swan Pirate","Area2Quest",1,CFrame.new(638,71,918),CFrame.new(700,80,1000)},
+    {951,1050,"Factory Staff","Area2Quest",2,CFrame.new(638,71,918),CFrame.new(500,80,700)},
+    {1051,1200,"Marine Lieutenant","MarineQuest3",1,CFrame.new(-2440,73,-3210),CFrame.new(-2300,80,-3000)},
+    {1201,1350,"Marine Captain","MarineQuest3",2,CFrame.new(-2440,73,-3210),CFrame.new(-2000,80,-3000)},
+    {1351,1500,"Zombie","ZombieQuest",1,CFrame.new(-5497,48,-794),CFrame.new(-5600,60,-900)},
 
--- TOGGLE
-local ToggleFrame = Instance.new("Frame", Content)
-ToggleFrame.Size = UDim2.new(1,0,0,40)
-ToggleFrame.Position = UDim2.new(0,0,0,60)
-ToggleFrame.BackgroundColor3 = Color3.fromRGB(30,30,30)
-Instance.new("UICorner", ToggleFrame)
+    -- SEA 3
+    {1500,1575,"Pirate Millionaire","PiratePortQuest",1,CFrame.new(-290,42,5580),CFrame.new(-200,50,5700)},
+    {1576,1675,"Pistol Billionaire","PiratePortQuest",2,CFrame.new(-290,42,5580),CFrame.new(-400,50,5900)},
+    {1676,1800,"Dragon Crew Warrior","AmazonQuest",1,CFrame.new(5830,52,-1100),CFrame.new(5900,60,-900)},
+    {1801,2000,"Dragon Crew Archer","AmazonQuest",2,CFrame.new(5830,52,-1100),CFrame.new(6100,60,-800)},
+    {2001,2200,"Peanut Scout","NutsQuest",1,CFrame.new(-2100,38,-10100),CFrame.new(-2000,50,-10000)},
+    {2201,2400,"Peanut President","NutsQuest",2,CFrame.new(-2100,38,-10100),CFrame.new(-2200,50,-10300)},
+    {2401,2600,"Ice Cream Chef","IceCreamQuest",1,CFrame.new(-820,65,-10950),CFrame.new(-900,70,-11000)},
+    {2601,2800,"Ice Cream Commander","IceCreamQuest",2,CFrame.new(-820,65,-10950),CFrame.new(-700,70,-10800)},
+}
 
-local ToggleText = Instance.new("TextLabel", ToggleFrame)
-ToggleText.Text = "Toggle Something"
-ToggleText.Size = UDim2.new(0.7,0,1,0)
-ToggleText.BackgroundTransparency = 1
-ToggleText.TextColor3 = Color3.new(1,1,1)
-ToggleText.Font = Enum.Font.Gotham
-ToggleText.TextSize = 14
+--------------------------------------------------
+-- 🔍 หาเควส
+--------------------------------------------------
+local function GetQuest()
+    local Lv = player.Data.Level.Value
+    for _,v in pairs(QuestTable) do
+        if Lv >= v[1] and Lv <= v[2] then
+            return v
+        end
+    end
+end
 
-local ToggleBtn = Instance.new("TextButton", ToggleFrame)
-ToggleBtn.Size = UDim2.new(0,50,0,25)
-ToggleBtn.Position = UDim2.new(1,-60,0.5,-12)
-ToggleBtn.BackgroundColor3 = Color3.fromRGB(80,80,80)
-ToggleBtn.Text = ""
-Instance.new("UICorner", ToggleBtn)
+--------------------------------------------------
+-- 🚀 TWEEN
+--------------------------------------------------
+local function TweenTo(cf)
+    local dist = (HRP().Position - cf.Position).Magnitude
+    local speed = 300
+    local t = dist / speed
 
-local Circle = Instance.new("Frame", ToggleBtn)
-Circle.Size = UDim2.new(0,20,0,20)
-Circle.Position = UDim2.new(0,2,0.5,-10)
-Circle.BackgroundColor3 = Color3.new(1,1,1)
-Instance.new("UICorner", Circle)
+    local tween = TweenService:Create(HRP(), TweenInfo.new(t), {CFrame = cf})
+    tween:Play()
+    tween.Completed:Wait()
+end
 
-local on = false
-ToggleBtn.MouseButton1Click:Connect(function()
-    on = not on
-    if on then
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(0,170,200)
-        Circle.Position = UDim2.new(1,-22,0.5,-10)
-    else
-        ToggleBtn.BackgroundColor3 = Color3.fromRGB(80,80,80)
-        Circle.Position = UDim2.new(0,2,0.5,-10)
+--------------------------------------------------
+-- ⚔️ ATTACK
+--------------------------------------------------
+local function Attack()
+    VirtualUser:Button1Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+end
+
+--------------------------------------------------
+-- 🔁 AUTO FARM
+--------------------------------------------------
+task.spawn(function()
+    while _G.AutoFarm do
+        task.wait(0.3)
+
+        local q = GetQuest()
+        if not q then continue end
+
+        local Mob = q[3]
+        local QuestName = q[4]
+        local QuestLv = q[5]
+        local CFrameQuest = q[6]
+        local CFrameMob = q[7]
+
+        -- รับเควส
+        pcall(function()
+            RS.Remotes.CommF_:InvokeServer("StartQuest", QuestName, QuestLv)
+        end)
+
+        -- หา mob
+        local mob = workspace.Enemies:FindFirstChild(Mob)
+
+        if mob and mob:FindFirstChild("HumanoidRootPart") then
+            repeat
+                task.wait()
+
+                HRP().CFrame = mob.HumanoidRootPart.CFrame * CFrame.new(0,20,0)
+                Attack()
+
+            until not mob or mob.Humanoid.Health <= 0 or not _G.AutoFarm
+        else
+            TweenTo(CFrameMob)
+        end
     end
 end)
